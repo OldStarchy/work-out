@@ -1116,6 +1116,11 @@ styled-jsx@5.1.1:
   dependencies:
     client-only "0.0.1"
 
+the-new-css-reset@^1.9.0:
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/the-new-css-reset/-/the-new-css-reset-1.9.0.tgz#2e268fcb4a85bd91512c3ce8f8915ebf1f0dcd87"
+  integrity sha512-bKM9xgiVFTqSuWle952Xu/YWE7qYMzPHWxerO0edxjBfPIm2T4k2tRpIJ45IU7knY35Jr6Fb5P/TVm2RIsB//Q==
+
 tr46@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/tr46/-/tr46-3.0.0.tgz#555c4e297a950617e8eeddef633c87d4d9d6cbf9"
