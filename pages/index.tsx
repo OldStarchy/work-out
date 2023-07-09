@@ -1,5 +1,7 @@
 import type { GetServerSideProps, InferGetServerSidePropsType } from 'next';
 import Head from 'next/head';
+import { useState } from 'react';
+import { useImmer } from 'use-immer';
 import Content from '../components/Content';
 import Layout from '../components/Layout';
 import clientPromise from '../lib/mongodb';
@@ -40,10 +42,28 @@ export const getServerSideProps: GetServerSideProps<
 	}
 };
 
+interface Workout {
+	title: string;
+	comments: string | null;
+	sets: Set[];
+}
+
+interface Set {
+	reps: number;
+	comment: string | null;
+}
+
 export default function Home({
 	isConnected,
 	posts,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+	const [workoutHistory, setWorkoutHistory] = useState<Workout[]>([]);
+	const [currentWorkout, setCurrentWorkout] = useImmer<Workout>({
+		title: 'type something',
+		comments: null,
+		sets: [],
+	});
+
 	return (
 		<>
 			<Head>
@@ -51,13 +71,99 @@ export default function Home({
 				<link rel="icon" href="/favicon.ico" />
 			</Head>
 
-			<Layout>
+			<Layout pageTitle="Track">
 				<Content>
-					<h1 className="title">
-						Welcome to{' '}
-						<a href="https://nextjs.org">Next.js with MongoDB!</a>
-					</h1>
+					<h1 className="title">no do'nt worry about it mario</h1>
+					<ol>
+						{workoutHistory.map((item) => (
+							<li>
+								<pre>
+									{JSON.stringify(item, undefined, '\t')}
+								</pre>
+							</li>
+						))}
+					</ol>
+					<div>
+						<label>Workout name</label>
+						<input
+							type="text"
+							value={currentWorkout.title}
+							onChange={(e) =>
+								setCurrentWorkout((draft) => {
+									draft.title = e.target.value;
+								})
+							}
+						/>
 
+						<ol>
+							{currentWorkout.sets.map((set, id) => (
+								<li>
+									<label>Reps</label>
+									<input
+										type="number"
+										value={set.reps}
+										onChange={(e) => {
+											setCurrentWorkout((draft) => {
+												draft.sets[id].reps =
+													e.target.valueAsNumber;
+											});
+										}}
+									/>
+									<label>Comment</label>
+									<input
+										type="string"
+										value={set.comment ?? ''}
+										onChange={(e) => {
+											setCurrentWorkout((draft) => {
+												draft.sets[id].comment =
+													e.target.value || null;
+											});
+										}}
+									/>
+									<button
+										type="button"
+										onClick={() => {
+											setCurrentWorkout((draft) => {
+												draft.sets.splice(id, 1);
+											});
+										}}
+									/>
+								</li>
+							))}
+							<li>
+								<button
+									onClick={() =>
+										setCurrentWorkout((w) => {
+											w.sets.push({
+												reps: 0,
+												comment: null,
+											});
+										})
+									}
+								>
+									add set
+								</button>
+							</li>
+						</ol>
+
+						<button
+							type="submit"
+							onClick={() => {
+								setWorkoutHistory((oldList) => [
+									...oldList,
+									currentWorkout,
+								]);
+								setCurrentWorkout({
+									title: 'type something else',
+									comments: null,
+									sets: [],
+								});
+							}}
+						>
+							Save
+						</button>
+					</div>
+					{/*
 					{isConnected ? (
 						<>
 							<h2 className="subtitle">
@@ -122,6 +228,7 @@ export default function Home({
 							</p>
 						</a>
 					</div>
+				*/}
 				</Content>
 			</Layout>
 		</>
