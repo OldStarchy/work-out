@@ -1,8 +1,9 @@
 import { Set } from './Set';
 
-export interface Workout {
+export interface Excersize {
 	date: string; // yyyy-mm-dd
-	title: string;
+	excersize: string;
+	weight: string | null;
 	comments: string | null;
 	sets: Set[];
 }

@@ -9,7 +9,8 @@ import SuggestBox from '../components/SuggestBox';
 import WorkoutSummary from '../components/WorkoutSummary';
 import Card from '../components/layout/Card';
 import clientPromise from '../lib/mongodb';
-import { Workout } from '../state/Workout';
+import { Excersize } from '../state/Exdersize';
+import { createDefaultSet } from '../state/createDefaultSet';
 import { createDefaultWorkout } from '../state/createDefaultWorkout';
 
 type ConnectionStatus = {
@@ -52,14 +53,16 @@ export default function Home({
 	isConnected,
 	posts,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
-	const [workoutHistory, setWorkoutHistory] = useState<Workout[]>([]);
-	const [currentWorkout, setCurrentWorkout] = useImmer<Workout | null>(
+	const [workoutHistory, setWorkoutHistory] = useState<Excersize[]>([]);
+	const [currentWorkout, setCurrentWorkout] = useImmer<Excersize | null>(
 		createDefaultWorkout()
 	);
 
 	const previousSimilarWorkouts =
-		currentWorkout && currentWorkout.title.length > 3
-			? workoutHistory.filter((w) => w.title === currentWorkout.title)
+		currentWorkout && currentWorkout.excersize.length > 3
+			? workoutHistory.filter(
+					(w) => w.excersize === currentWorkout.excersize
+			  )
 			: [];
 	const lastReps =
 		currentWorkout?.sets[currentWorkout.sets.length - 1]?.reps ?? 8;
@@ -86,7 +89,7 @@ export default function Home({
 									<h2>Record a new excersize</h2>
 
 									<SuggestBox
-										value={currentWorkout.title}
+										value={currentWorkout.excersize}
 										options={[
 											'bench press',
 											'overhead press',
@@ -101,7 +104,7 @@ export default function Home({
 										onChange={(value) =>
 											setCurrentWorkout((draft) => {
 												if (!draft) return;
-												draft.title = value;
+												draft.excersize = value;
 											})
 										}
 									/>
@@ -200,11 +203,7 @@ export default function Home({
 																if (!draft)
 																	return;
 																draft.sets.push(
-																	{
-																		reps: lastReps,
-																		comment:
-																			null,
-																	}
+																	createDefaultSet()
 																);
 															}
 														)
@@ -266,7 +265,7 @@ export default function Home({
 										<div>
 											<h3>
 												Last time you did{' '}
-												{currentWorkout.title}
+												{currentWorkout.excersize}
 												...
 											</h3>
 											<ol>
