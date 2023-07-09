@@ -16,13 +16,15 @@ export default function Layout({
 				flexDirection: 'column',
 				margin: '0',
 				padding: '0',
+				backgroundColor: style.background,
+				color: style.color,
 			}}
 		>
 			<header
 				style={{
 					flexGrow: 0,
 					display: 'flex',
-					padding: '1rem 1rem',
+					padding: '0.5rem 1rem',
 					alignItems: 'center',
 					backgroundColor: style.primary,
 				}}
@@ -45,28 +47,36 @@ export default function Layout({
 					Work Out
 				</span>
 			</header>
-			<main
+			<div
 				style={{
 					flexGrow: 1,
 					flexShrink: 1,
 					overflow: 'auto',
 					padding: '1rem',
+					display: 'flex',
+					flexDirection: 'column',
 				}}
 			>
-				{children}
-			</main>
-			<footer
-				style={{
-					flexGrow: 0,
-					padding: '1rem',
-					textAlign: 'right',
-				}}
-			>
-				&copy; {new Date().getFullYear()}{' '}
-				<a href="https://github.com/OldStarchy" target="_BLANK">
-					OldStarchy
-				</a>
-			</footer>
+				<main
+					style={{
+						flexGrow: 1,
+					}}
+				>
+					{children}
+				</main>
+				<footer
+					style={{
+						flexGrow: 0,
+						padding: '0.5rem 1rem',
+						textAlign: 'right',
+					}}
+				>
+					&copy; {new Date().getFullYear()}{' '}
+					<a href="https://github.com/OldStarchy" target="_BLANK">
+						OldStarchy
+					</a>
+				</footer>
+			</div>
 		</div>
 	);
 }

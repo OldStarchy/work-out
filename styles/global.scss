@@ -1,5 +1,9 @@
 @import 'the-new-css-reset';
 
+:root {
+	font-size: 20px;
+}
+
 html,
 body,
 #__next {
@@ -10,17 +14,19 @@ body,
 input {
 	border: 1px solid black;
 	padding: 0.25em;
-}
-input:disabled {
-	background-color: #eee;
-	color: #aaa;
+	min-width: 0;
+
+	&:disabled {
+		color: #aaa;
+	}
 }
 
 button {
 	border: 1px solid black;
 	padding: 0.25em;
 	background-color: #eee;
-}
-button:disabled {
-	color: #aaa;
+
+	&:disabled {
+		opacity: 0.7;
+	}
 }

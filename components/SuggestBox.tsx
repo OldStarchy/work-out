@@ -61,7 +61,6 @@ export default function SuggestBox({
 							onClick={() => {
 								onChange(option);
 								setShowOptions(false);
-								inputRef.current?.focus();
 							}}
 						>
 							{option}

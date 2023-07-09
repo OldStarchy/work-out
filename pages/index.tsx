@@ -7,6 +7,7 @@ import DateTimePicker from '../components/DateTimePicker';
 import Layout from '../components/Layout';
 import SuggestBox from '../components/SuggestBox';
 import WorkoutSummary from '../components/WorkoutSummary';
+import Card from '../components/layout/Card';
 import clientPromise from '../lib/mongodb';
 import { Workout } from '../state/Workout';
 import { createDefaultWorkout } from '../state/createDefaultWorkout';
@@ -52,16 +53,16 @@ export default function Home({
 	posts,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
 	const [workoutHistory, setWorkoutHistory] = useState<Workout[]>([]);
-	const [currentWorkout, setCurrentWorkout] = useImmer<Workout>(
+	const [currentWorkout, setCurrentWorkout] = useImmer<Workout | null>(
 		createDefaultWorkout()
 	);
 
 	const previousSimilarWorkouts =
-		currentWorkout.title.length > 3
+		currentWorkout && currentWorkout.title.length > 3
 			? workoutHistory.filter((w) => w.title === currentWorkout.title)
 			: [];
 	const lastReps =
-		currentWorkout.sets[currentWorkout.sets.length - 1]?.reps ?? 8;
+		currentWorkout?.sets[currentWorkout.sets.length - 1]?.reps ?? 8;
 
 	return (
 		<>
@@ -73,134 +74,225 @@ export default function Home({
 			<Layout pageTitle="Track">
 				<Content>
 					<div>
-						<label>Workout</label>
-						<SuggestBox
-							value={currentWorkout.title}
-							options={[
-								'bench press',
-								'overhead press',
-								'barbell row',
-								'pull up',
-								'chin up',
-								'push up',
-								'curl',
-								'hammer curl',
-								'lat raise',
-							]}
-							onChange={(value) =>
-								setCurrentWorkout((draft) => {
-									draft.title = value;
-								})
-							}
-						/>
-						{previousSimilarWorkouts.length > 0 && (
-							<>
-								<h3>
-									Last time you did {currentWorkout.title}...
-								</h3>
-								<ol>
-									{previousSimilarWorkouts.map((w, id) => (
-										<li key={id}>
-											<WorkoutSummary workout={w} />
-										</li>
-									))}
-								</ol>
-							</>
-						)}
+						{currentWorkout ? (
+							<Card>
+								<div
+									style={{
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '1rem',
+									}}
+								>
+									<h2>Record a new excersize</h2>
 
-						<h2>Record a new excersize</h2>
-						<DateTimePicker
-							value={currentWorkout.date}
-							onChange={(value) => {
-								setCurrentWorkout((draft) => {
-									draft.date = value;
-								});
-							}}
-						/>
-						<ol>
-							{currentWorkout.sets.map((set, id) => (
-								<li>
-									<h4>Set #{id + 1}</h4>
-									<label>
-										<input
-											type="number"
-											value={set.reps}
+									<SuggestBox
+										value={currentWorkout.title}
+										options={[
+											'bench press',
+											'overhead press',
+											'barbell row',
+											'pull up',
+											'chin up',
+											'push up',
+											'curl',
+											'hammer curl',
+											'lat raise',
+										]}
+										onChange={(value) =>
+											setCurrentWorkout((draft) => {
+												if (!draft) return;
+												draft.title = value;
+											})
+										}
+									/>
+									<DateTimePicker
+										value={currentWorkout.date}
+										onChange={(value) => {
+											setCurrentWorkout((draft) => {
+												if (!draft) return;
+												draft.date = value;
+											});
+										}}
+									/>
+									<ol>
+										{currentWorkout.sets.map((set, id) => (
+											<li>
+												<div
+													style={{
+														display: 'flex',
+														gap: '0.5em',
+														alignItems: 'center',
+													}}
+												>
+													<h4>Set #{id + 1}</h4>
+													<input
+														type="number"
+														value={set.reps}
+														style={{
+															width: '3em',
+														}}
+														onChange={(e) => {
+															setCurrentWorkout(
+																(draft) => {
+																	if (!draft)
+																		return;
+																	draft.sets[
+																		id
+																	].reps =
+																		e.target.valueAsNumber;
+																}
+															);
+														}}
+													/>
+													<label>Reps</label>
+													<input
+														type="string"
+														placeholder="notes..."
+														value={
+															set.comment ?? ''
+														}
+														onChange={(e) => {
+															setCurrentWorkout(
+																(draft) => {
+																	if (!draft)
+																		return;
+																	draft.sets[
+																		id
+																	].comment =
+																		e.target
+																			.value ||
+																		null;
+																}
+															);
+														}}
+													/>
+													<button
+														type="button"
+														onClick={() => {
+															setCurrentWorkout(
+																(draft) => {
+																	if (!draft)
+																		return;
+																	draft.sets.splice(
+																		id,
+																		1
+																	);
+																}
+															);
+														}}
+													>
+														Delete
+													</button>
+												</div>
+											</li>
+										))}
+										<li>
+											<div
+												style={{
+													display: 'flex',
+													justifyContent: 'flex-end',
+												}}
+											>
+												<button
+													onClick={() =>
+														setCurrentWorkout(
+															(draft) => {
+																if (!draft)
+																	return;
+																draft.sets.push(
+																	{
+																		reps: lastReps,
+																		comment:
+																			null,
+																	}
+																);
+															}
+														)
+													}
+												>
+													add set
+												</button>
+											</div>
+										</li>
+									</ol>
+
+									<div>
+										<textarea
+											placeholder="notes..."
 											style={{
-												width: '3em',
+												backgroundColor: 'white',
+												width: '100%',
+												resize: 'vertical',
 											}}
+											value={
+												currentWorkout.comments ?? ''
+											}
 											onChange={(e) => {
 												setCurrentWorkout((draft) => {
-													draft.sets[id].reps =
-														e.target.valueAsNumber;
-												});
-											}}
-										/>
-										Reps
-									</label>
-									{set.comment !== null ? (
-										<input
-											type="string"
-											placeholder="Comment"
-											value={set.comment ?? ''}
-											onChange={(e) => {
-												setCurrentWorkout((draft) => {
-													draft.sets[id].comment =
+													if (!draft) return;
+													draft.comments =
 														e.target.value || null;
 												});
 											}}
 										/>
-									) : (
-										<button
-											type="button"
-											onClick={() => {
-												setCurrentWorkout((draft) => {
-													draft.sets[id].comment = '';
-												});
-											}}
-										>
-											Add comment
-										</button>
-									)}
-									<button
-										type="button"
-										onClick={() => {
-											setCurrentWorkout((draft) => {
-												draft.sets.splice(id, 1);
-											});
+									</div>
+
+									<div
+										style={{
+											display: 'flex',
+											justifyContent: 'space-between',
 										}}
 									>
-										Delete
-									</button>
-								</li>
-							))}
-							<li>
-								<button
-									onClick={() =>
-										setCurrentWorkout((w) => {
-											w.sets.push({
-												reps: lastReps,
-												comment: null,
-											});
-										})
-									}
-								>
-									add set
-								</button>
-							</li>
-						</ol>
-
-						<button
-							type="submit"
-							onClick={() => {
-								setWorkoutHistory((oldList) => [
-									...oldList,
-									currentWorkout,
-								]);
-								setCurrentWorkout(createDefaultWorkout());
-							}}
-						>
-							Save
-						</button>
+										<button
+											onClick={() => {
+												setCurrentWorkout(null);
+											}}
+										>
+											Cancel
+										</button>
+										<button
+											onClick={() => {
+												setWorkoutHistory((oldList) => [
+													...oldList,
+													currentWorkout,
+												]);
+												setCurrentWorkout(null);
+											}}
+										>
+											Save
+										</button>
+									</div>
+									{previousSimilarWorkouts.length > 0 && (
+										<div>
+											<h3>
+												Last time you did{' '}
+												{currentWorkout.title}
+												...
+											</h3>
+											<ol>
+												{previousSimilarWorkouts.map(
+													(w, id) => (
+														<li key={id}>
+															<WorkoutSummary
+																workout={w}
+															/>
+														</li>
+													)
+												)}
+											</ol>
+										</div>
+									)}
+								</div>
+							</Card>
+						) : (
+							<button
+								onClick={() =>
+									setCurrentWorkout(createDefaultWorkout())
+								}
+							>
+								Record a new excersize
+							</button>
+						)}
 					</div>
 					<h2>Workout history</h2>
 					{workoutHistory.length > 0 ? (
