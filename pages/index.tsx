@@ -3,8 +3,13 @@ import Head from 'next/head';
 import { useState } from 'react';
 import { useImmer } from 'use-immer';
 import Content from '../components/Content';
+import DateTimePicker from '../components/DateTimePicker';
 import Layout from '../components/Layout';
+import SuggestBox from '../components/SuggestBox';
+import WorkoutSummary from '../components/WorkoutSummary';
 import clientPromise from '../lib/mongodb';
+import { Workout } from '../state/Workout';
+import { createDefaultWorkout } from '../state/createDefaultWorkout';
 
 type ConnectionStatus = {
 	isConnected: boolean;
@@ -42,27 +47,21 @@ export const getServerSideProps: GetServerSideProps<
 	}
 };
 
-interface Workout {
-	title: string;
-	comments: string | null;
-	sets: Set[];
-}
-
-interface Set {
-	reps: number;
-	comment: string | null;
-}
-
 export default function Home({
 	isConnected,
 	posts,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
 	const [workoutHistory, setWorkoutHistory] = useState<Workout[]>([]);
-	const [currentWorkout, setCurrentWorkout] = useImmer<Workout>({
-		title: 'type something',
-		comments: null,
-		sets: [],
-	});
+	const [currentWorkout, setCurrentWorkout] = useImmer<Workout>(
+		createDefaultWorkout()
+	);
+
+	const previousSimilarWorkouts =
+		currentWorkout.title.length > 3
+			? workoutHistory.filter((w) => w.title === currentWorkout.title)
+			: [];
+	const lastReps =
+		currentWorkout.sets[currentWorkout.sets.length - 1]?.reps ?? 8;
 
 	return (
 		<>
@@ -73,53 +72,95 @@ export default function Home({
 
 			<Layout pageTitle="Track">
 				<Content>
-					<h1 className="title">no do'nt worry about it mario</h1>
-					<ol>
-						{workoutHistory.map((item) => (
-							<li>
-								<pre>
-									{JSON.stringify(item, undefined, '\t')}
-								</pre>
-							</li>
-						))}
-					</ol>
 					<div>
-						<label>Workout name</label>
-						<input
-							type="text"
+						<label>Workout</label>
+						<SuggestBox
 							value={currentWorkout.title}
-							onChange={(e) =>
+							options={[
+								'bench press',
+								'overhead press',
+								'barbell row',
+								'pull up',
+								'chin up',
+								'push up',
+								'curl',
+								'hammer curl',
+								'lat raise',
+							]}
+							onChange={(value) =>
 								setCurrentWorkout((draft) => {
-									draft.title = e.target.value;
+									draft.title = value;
 								})
 							}
 						/>
+						{previousSimilarWorkouts.length > 0 && (
+							<>
+								<h3>
+									Last time you did {currentWorkout.title}...
+								</h3>
+								<ol>
+									{previousSimilarWorkouts.map((w, id) => (
+										<li key={id}>
+											<WorkoutSummary workout={w} />
+										</li>
+									))}
+								</ol>
+							</>
+						)}
 
+						<h2>Record a new excersize</h2>
+						<DateTimePicker
+							value={currentWorkout.date}
+							onChange={(value) => {
+								setCurrentWorkout((draft) => {
+									draft.date = value;
+								});
+							}}
+						/>
 						<ol>
 							{currentWorkout.sets.map((set, id) => (
 								<li>
-									<label>Reps</label>
-									<input
-										type="number"
-										value={set.reps}
-										onChange={(e) => {
-											setCurrentWorkout((draft) => {
-												draft.sets[id].reps =
-													e.target.valueAsNumber;
-											});
-										}}
-									/>
-									<label>Comment</label>
-									<input
-										type="string"
-										value={set.comment ?? ''}
-										onChange={(e) => {
-											setCurrentWorkout((draft) => {
-												draft.sets[id].comment =
-													e.target.value || null;
-											});
-										}}
-									/>
+									<h4>Set #{id + 1}</h4>
+									<label>
+										<input
+											type="number"
+											value={set.reps}
+											style={{
+												width: '3em',
+											}}
+											onChange={(e) => {
+												setCurrentWorkout((draft) => {
+													draft.sets[id].reps =
+														e.target.valueAsNumber;
+												});
+											}}
+										/>
+										Reps
+									</label>
+									{set.comment !== null ? (
+										<input
+											type="string"
+											placeholder="Comment"
+											value={set.comment ?? ''}
+											onChange={(e) => {
+												setCurrentWorkout((draft) => {
+													draft.sets[id].comment =
+														e.target.value || null;
+												});
+											}}
+										/>
+									) : (
+										<button
+											type="button"
+											onClick={() => {
+												setCurrentWorkout((draft) => {
+													draft.sets[id].comment = '';
+												});
+											}}
+										>
+											Add comment
+										</button>
+									)}
 									<button
 										type="button"
 										onClick={() => {
@@ -127,7 +168,9 @@ export default function Home({
 												draft.sets.splice(id, 1);
 											});
 										}}
-									/>
+									>
+										Delete
+									</button>
 								</li>
 							))}
 							<li>
@@ -135,7 +178,7 @@ export default function Home({
 									onClick={() =>
 										setCurrentWorkout((w) => {
 											w.sets.push({
-												reps: 0,
+												reps: lastReps,
 												comment: null,
 											});
 										})
@@ -153,16 +196,25 @@ export default function Home({
 									...oldList,
 									currentWorkout,
 								]);
-								setCurrentWorkout({
-									title: 'type something else',
-									comments: null,
-									sets: [],
-								});
+								setCurrentWorkout(createDefaultWorkout());
 							}}
 						>
 							Save
 						</button>
 					</div>
+					<h2>Workout history</h2>
+					{workoutHistory.length > 0 ? (
+						<ol>
+							{workoutHistory.map((item, id) => (
+								<li key={id}>
+									<WorkoutSummary workout={item} />
+								</li>
+							))}
+						</ol>
+					) : (
+						<p>No recorded history</p>
+					)}
+
 					{/*
 					{isConnected ? (
 						<>

@@ -11,8 +11,8 @@ export default function Layout({
 		<div
 			style={{
 				display: 'flex',
-				width: '100vw',
-				height: '100vh',
+				width: '100%',
+				height: '100%',
 				flexDirection: 'column',
 				margin: '0',
 				padding: '0',
