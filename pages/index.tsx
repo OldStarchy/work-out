@@ -1,16 +1,10 @@
 import type { GetServerSideProps, InferGetServerSidePropsType } from 'next';
-import Head from 'next/head';
-import { useState } from 'react';
-import { useImmer } from 'use-immer';
-import Content from '../components/Content';
-import DateTimePicker from '../components/DateTimePicker';
-import Layout from '../components/Layout';
-import SuggestBox from '../components/SuggestBox';
-import WorkoutSummary from '../components/WorkoutSummary';
-import Card from '../components/layout/Card';
+import { useSession } from 'next-auth/react';
+import { useReducer, useState } from 'react';
+import { ImmerReducer, useImmer } from 'use-immer';
 import clientPromise from '../lib/mongodb';
 import { Excersize } from '../state/Exdersize';
-import { createDefaultSet } from '../state/createDefaultSet';
+import { Workout } from '../state/Workout';
 import { createDefaultWorkout } from '../state/createDefaultWorkout';
 
 type ConnectionStatus = {
@@ -49,6 +43,40 @@ export const getServerSideProps: GetServerSideProps<
 	}
 };
 
+type WorkoutAction =
+	| {
+			type: 'addExcersize';
+			excersize: Excersize;
+	  }
+	| {
+			type: 'removeExcersize';
+			excersizeIndex: number;
+	  }
+	| {
+			type: 'changeExcersize';
+			excersizeIndex: number;
+			excersize: Excersize;
+	  };
+
+const workoutReducer: ImmerReducer<Workout, WorkoutAction> = (
+	state,
+	action
+) => {
+	switch (action.type) {
+		case 'addExcersize':
+			state.excersizes.push(action.excersize);
+			return;
+		case 'removeExcersize':
+			state.excersizes.splice(action.excersizeIndex, 1);
+			return;
+		case 'changeExcersize':
+			state.excersizes[action.excersizeIndex] = action.excersize;
+			return;
+		default:
+			throw new Error('Invalid action type');
+	}
+};
+
 export default function Home({
 	isConnected,
 	posts,
@@ -57,6 +85,10 @@ export default function Home({
 	const [currentWorkout, setCurrentWorkout] = useImmer<Excersize | null>(
 		createDefaultWorkout()
 	);
+
+	const [a, dispatchA] = useReducer(workoutReducer, [], () => [
+		createDefaultWorkout(),
+	]);
 
 	const previousSimilarWorkouts =
 		currentWorkout && currentWorkout.excersize.length > 3
@@ -67,315 +99,13 @@ export default function Home({
 	const lastReps =
 		currentWorkout?.sets[currentWorkout.sets.length - 1]?.reps ?? 8;
 
-	return (
-		<>
-			<Head>
-				<title>Create Next App</title>
-				<link rel="icon" href="/favicon.ico" />
-			</Head>
+	const { data: session } = useSession();
 
-			<Layout pageTitle="Track">
-				<Content>
-					<div>
-						{currentWorkout ? (
-							<Card>
-								<div
-									style={{
-										display: 'flex',
-										flexDirection: 'column',
-										gap: '1rem',
-									}}
-								>
-									<h2>Record a new excersize</h2>
-
-									<SuggestBox
-										value={currentWorkout.excersize}
-										options={[
-											'bench press',
-											'overhead press',
-											'barbell row',
-											'pull up',
-											'chin up',
-											'push up',
-											'curl',
-											'hammer curl',
-											'lat raise',
-										]}
-										onChange={(value) =>
-											setCurrentWorkout((draft) => {
-												if (!draft) return;
-												draft.excersize = value;
-											})
-										}
-									/>
-									<DateTimePicker
-										value={currentWorkout.date}
-										onChange={(value) => {
-											setCurrentWorkout((draft) => {
-												if (!draft) return;
-												draft.date = value;
-											});
-										}}
-									/>
-									<ol>
-										{currentWorkout.sets.map((set, id) => (
-											<li>
-												<div
-													style={{
-														display: 'flex',
-														gap: '0.5em',
-														alignItems: 'center',
-													}}
-												>
-													<h4>Set #{id + 1}</h4>
-													<input
-														type="number"
-														value={set.reps}
-														style={{
-															width: '3em',
-														}}
-														onChange={(e) => {
-															setCurrentWorkout(
-																(draft) => {
-																	if (!draft)
-																		return;
-																	draft.sets[
-																		id
-																	].reps =
-																		e.target.valueAsNumber;
-																}
-															);
-														}}
-													/>
-													<label>Reps</label>
-													<input
-														type="string"
-														placeholder="notes..."
-														value={
-															set.comment ?? ''
-														}
-														onChange={(e) => {
-															setCurrentWorkout(
-																(draft) => {
-																	if (!draft)
-																		return;
-																	draft.sets[
-																		id
-																	].comment =
-																		e.target
-																			.value ||
-																		null;
-																}
-															);
-														}}
-													/>
-													<button
-														type="button"
-														onClick={() => {
-															setCurrentWorkout(
-																(draft) => {
-																	if (!draft)
-																		return;
-																	draft.sets.splice(
-																		id,
-																		1
-																	);
-																}
-															);
-														}}
-													>
-														Delete
-													</button>
-												</div>
-											</li>
-										))}
-										<li>
-											<div
-												style={{
-													display: 'flex',
-													justifyContent: 'flex-end',
-												}}
-											>
-												<button
-													onClick={() =>
-														setCurrentWorkout(
-															(draft) => {
-																if (!draft)
-																	return;
-																draft.sets.push(
-																	createDefaultSet()
-																);
-															}
-														)
-													}
-												>
-													add set
-												</button>
-											</div>
-										</li>
-									</ol>
-
-									<div>
-										<textarea
-											placeholder="notes..."
-											style={{
-												backgroundColor: 'white',
-												width: '100%',
-												resize: 'vertical',
-											}}
-											value={
-												currentWorkout.comments ?? ''
-											}
-											onChange={(e) => {
-												setCurrentWorkout((draft) => {
-													if (!draft) return;
-													draft.comments =
-														e.target.value || null;
-												});
-											}}
-										/>
-									</div>
-
-									<div
-										style={{
-											display: 'flex',
-											justifyContent: 'space-between',
-										}}
-									>
-										<button
-											onClick={() => {
-												setCurrentWorkout(null);
-											}}
-										>
-											Cancel
-										</button>
-										<button
-											onClick={() => {
-												setWorkoutHistory((oldList) => [
-													...oldList,
-													currentWorkout,
-												]);
-												setCurrentWorkout(null);
-											}}
-										>
-											Save
-										</button>
-									</div>
-									{previousSimilarWorkouts.length > 0 && (
-										<div>
-											<h3>
-												Last time you did{' '}
-												{currentWorkout.excersize}
-												...
-											</h3>
-											<ol>
-												{previousSimilarWorkouts.map(
-													(w, id) => (
-														<li key={id}>
-															<WorkoutSummary
-																workout={w}
-															/>
-														</li>
-													)
-												)}
-											</ol>
-										</div>
-									)}
-								</div>
-							</Card>
-						) : (
-							<button
-								onClick={() =>
-									setCurrentWorkout(createDefaultWorkout())
-								}
-							>
-								Record a new excersize
-							</button>
-						)}
-					</div>
-					<h2>Workout history</h2>
-					{workoutHistory.length > 0 ? (
-						<ol>
-							{workoutHistory.map((item, id) => (
-								<li key={id}>
-									<WorkoutSummary workout={item} />
-								</li>
-							))}
-						</ol>
-					) : (
-						<p>No recorded history</p>
-					)}
-
-					{/*
-					{isConnected ? (
-						<>
-							<h2 className="subtitle">
-								You are connected to MongoDB
-							</h2>
-							{posts.map((post) => (
-								<>
-									<div>{post.title}</div>
-									<div>{post.content}</div>
-								</>
-							))}
-						</>
-					) : (
-						<h2 className="subtitle">
-							You are NOT connected to MongoDB. Check the{' '}
-							<code>README.md</code> for instructions.
-						</h2>
-					)}
-
-					<p className="description">
-						Get started by editing <code>pages/index.js</code>
-					</p>
-
-					<div className="grid">
-						<a href="https://nextjs.org/docs" className="card">
-							<h3>Documentation &rarr;</h3>
-							<p>
-								Find in-depth information about Next.js features
-								and API.
-							</p>
-						</a>
-
-						<a href="https://nextjs.org/learn" className="card">
-							<h3>Learn &rarr;</h3>
-							<p>
-								Learn about Next.js in an interactive course
-								with quizzes!
-							</p>
-						</a>
-
-						<a
-							href="https://github.com/vercel/next.js/tree/canary/examples"
-							className="card"
-						>
-							<h3>Examples &rarr;</h3>
-							<p>
-								Discover and deploy boilerplate example Next.js
-								projects.
-							</p>
-						</a>
-
-						<a
-							href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="card"
-						>
-							<h3>Deploy &rarr;</h3>
-							<p>
-								Instantly deploy your Next.js site to a public
-								URL with Vercel.
-							</p>
-						</a>
-					</div>
-				*/}
-				</Content>
-			</Layout>
-		</>
-	);
+	if (!session) {
+		return <div>Not signed in</div>;
+	} else {
+		return <pre>{session.user?.name ?? 'no user'}</pre>;
+	}
 }
 
 class Post {
