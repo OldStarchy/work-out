@@ -2,8 +2,12 @@
 
 :root {
 	font-size: 20px;
+	font-family: Arial, Helvetica, sans-serif;
 }
 
+body {
+	font-size: 1.5rem;
+}
 html,
 body,
 #__next {
@@ -24,7 +28,6 @@ input {
 button {
 	border: 1px solid black;
 	padding: 0.25em;
-	background-color: #eee;
 
 	&:disabled {
 		opacity: 0.7;
