@@ -6,6 +6,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@auth/mongodb-adapter": "^2.0.0",
     "immer": "^10.0.2",
     "mongodb": "^4.8.1",
     "next": "latest",

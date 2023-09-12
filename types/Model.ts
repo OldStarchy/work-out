@@ -1,25 +1,7 @@
 interface User {
 	id: string;
-	name: string;
 
-	credentials: UserCredential[];
-}
-
-interface BaseUserCredential {
-	for: User['id'];
-	type: string;
-}
-
-type UserCredential = UserCredentialPassword | UserCredentialToken;
-
-interface UserCredentialPassword extends BaseUserCredential {
-	type: 'password';
-	password: string;
-}
-
-interface UserCredentialToken extends BaseUserCredential {
-	type: 'token';
-	token: string;
+	status: string;
 }
 
 interface Gym {

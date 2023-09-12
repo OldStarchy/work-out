@@ -1,5 +1,5 @@
 import type { GetServerSideProps, InferGetServerSidePropsType } from 'next';
-import { useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { useReducer, useState } from 'react';
 import { ImmerReducer, useImmer } from 'use-immer';
 import clientPromise from '../lib/mongodb';
@@ -101,10 +101,27 @@ export default function Home({
 
 	const { data: session } = useSession();
 
-	if (!session) {
-		return <div>Not signed in</div>;
+	if (!session?.user) {
+		return (
+			<div>
+				Not signed in <button onClick={() => signIn()}>Sign in</button>
+			</div>
+		);
 	} else {
-		return <pre>{session.user?.name ?? 'no user'}</pre>;
+		return (
+			<div>
+				Hello {session.user.name}{' '}
+				{session.user.image && (
+					<img
+						src={session.user.image}
+						width="128"
+						height="128"
+						alt={`${session.user.name}'s Profile Image`}
+					/>
+				)}
+				<button onClick={() => signOut()}>Sign out</button>
+			</div>
+		);
 	}
 }
 
