@@ -1,5 +1,5 @@
 import { MongoDBAdapter } from '@auth/mongodb-adapter';
-import NextAuth from 'next-auth';
+import NextAuth, { NextAuthOptions } from 'next-auth';
 import DiscordProvider from 'next-auth/providers/discord';
 import clientPromise from '../../../lib/mongodb';
 // import EmailProvider from 'next-auth/providers/email';
@@ -12,7 +12,7 @@ function assertString(str: string | undefined): string {
 	return str;
 }
 
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
 	secret: assertString(process.env.SECRET),
 	adapter: MongoDBAdapter(clientPromise, {
 		databaseName: 'workouth-auth',
@@ -29,4 +29,6 @@ export default NextAuth({
 		// 	from: '<no-reply@example.com>',
 		// }),
 	],
-});
+};
+
+export default NextAuth(authOptions);
