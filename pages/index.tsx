@@ -1,22 +1,33 @@
 import type { GetServerSideProps, InferGetServerSidePropsType } from 'next';
-import { signIn, signOut, useSession } from 'next-auth/react';
-import { useReducer, useState } from 'react';
+import { getSession, signIn, signOut, useSession } from 'next-auth/react';
+import { useState } from 'react';
 import { ImmerReducer, useImmer } from 'use-immer';
-import clientPromise from '../lib/mongodb';
+import clientPromise, { usersPromise } from '../lib/mongodb';
 import { Excersize } from '../state/Exdersize';
 import { Workout } from '../state/Workout';
 import { createDefaultWorkout } from '../state/createDefaultWorkout';
+import { authOptions } from './api/auth/[...nextauth]';
 
 type ConnectionStatus = {
 	isConnected: boolean;
-	posts: Post[];
+	// posts: Post[];
+	userStatus: string | null;
+	userStatuses: string[];
 };
 
-export const getServerSideProps: GetServerSideProps<
-	ConnectionStatus
-> = async () => {
+export const getServerSideProps: GetServerSideProps<ConnectionStatus> = async (
+	ctx
+) => {
 	try {
 		const client = await clientPromise;
+		const users = await usersPromise;
+		const session = await getSession(ctx);
+
+		const user =
+			session?.user?.email &&
+			(await authOptions.adapter!.getUserByEmail!(session.user.email));
+		const userData = user ? await users.findOne({ id: user.id }) : null;
+
 		// `await clientPromise` will use the default database passed in the MONGODB_URI
 		// However you can use another database (e.g. myDatabase) by replacing the `await clientPromise` with the following code:
 		//
@@ -26,19 +37,48 @@ export const getServerSideProps: GetServerSideProps<
 		// Then you can execute queries against your database like so:
 		// db.find({}) or any of the MongoDB Node Driver commands
 
-		const posts = (
-			await client.db('posts').collection('posts').find({}).toArray()
-		).map(
-			(data) => new Post(data._id.toHexString(), data.title, data.content)
+		// const posts = (
+		// 	await client.db('posts').collection('posts').find({}).toArray()
+		// ).map(
+		// 	(data) => new Post(data._id.toHexString(), data.title, data.content)
+		// );
+
+		const allUsers = await Promise.all(
+			(
+				await users.find({}).toArray()
+			).map(async (u) => ({
+				authUser: await authOptions.adapter!.getUser!(u.id),
+				user: u,
+			}))
 		);
 
+		const userStatuses = allUsers.map(
+			(u) => `${u.authUser?.name ?? '??'}: ${u.user.status}`
+		);
+		console.log({
+			user,
+			userData,
+			userStatuses,
+			foo: 'foo',
+		});
+
 		return {
-			props: { isConnected: true, posts },
+			props: {
+				isConnected: true,
+				// posts,
+				userStatuses,
+				userStatus: userData?.status ?? null,
+			},
 		};
 	} catch (e) {
 		console.error(e);
 		return {
-			props: { isConnected: false, posts: [] },
+			props: {
+				isConnected: false,
+				// posts: [],
+				userStatuses: [],
+				userStatus: `${e}`,
+			},
 		};
 	}
 };
@@ -79,16 +119,18 @@ const workoutReducer: ImmerReducer<Workout, WorkoutAction> = (
 
 export default function Home({
 	isConnected,
-	posts,
+	// posts,
+	userStatuses,
+	userStatus,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
 	const [workoutHistory, setWorkoutHistory] = useState<Excersize[]>([]);
 	const [currentWorkout, setCurrentWorkout] = useImmer<Excersize | null>(
 		createDefaultWorkout()
 	);
 
-	const [a, dispatchA] = useReducer(workoutReducer, [], () => [
-		createDefaultWorkout(),
-	]);
+	// const [a, dispatchA] = useReducer(workoutReducer, [], () => [
+	// 	createDefaultWorkout(),
+	// ]);
 
 	const previousSimilarWorkouts =
 		currentWorkout && currentWorkout.excersize.length > 3
@@ -120,50 +162,59 @@ export default function Home({
 					/>
 				)}
 				<button onClick={() => signOut()}>Sign out</button>
+				<form action="/api/addPost" method="post">
+					<input defaultValue={userStatus ?? ''} name="status" />
+					<button type="submit">Add Status</button>
+				</form>
+				<ul>
+					{userStatuses.map((status, i) => (
+						<li key={i}>{status}</li>
+					))}
+				</ul>
 			</div>
 		);
 	}
 }
 
-class Post {
-	constructor(
-		public id: string | null,
-		public title: string,
-		public content: string
-	) {}
+// class Post {
+// 	constructor(
+// 		public id: string | null,
+// 		public title: string,
+// 		public content: string
+// 	) {}
 
-	//todo: graphql
-	async write() {
-		const response = await fetch('http://localhost:3000/api/addPost', {
-			method: 'POST',
-			body: JSON.stringify({
-				title: this.title,
-				content: this.content,
-			}),
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-			},
-		});
+// 	//todo: graphql
+// 	async write() {
+// 		const response = await fetch('http://localhost:3000/api/addPost', {
+// 			method: 'POST',
+// 			body: JSON.stringify({
+// 				title: this.title,
+// 				content: this.content,
+// 			}),
+// 			headers: {
+// 				Accept: 'application/json',
+// 				'Content-Type': 'application/json',
+// 			},
+// 		});
 
-		const data = (await response.json()) as { _id: string };
+// 		const data = (await response.json()) as { _id: string };
 
-		this.id = data._id;
-	}
+// 		this.id = data._id;
+// 	}
 
-	static async get() {
-		const response = await fetch('http://localhost:3000/api/getPosts', {
-			headers: {
-				Accept: 'application/json',
-			},
-		});
+// 	static async get() {
+// 		const response = await fetch('http://localhost:3000/api/getPosts', {
+// 			headers: {
+// 				Accept: 'application/json',
+// 			},
+// 		});
 
-		const data = (await response.json()) as {
-			id: string;
-			title: string;
-			content: string;
-		}[];
+// 		const data = (await response.json()) as {
+// 			id: string;
+// 			title: string;
+// 			content: string;
+// 		}[];
 
-		return data.map((data) => new Post(data.id, data.title, data.content));
-	}
-}
+// 		return data.map((data) => new Post(data.id, data.title, data.content));
+// 	}
+// }
