@@ -31,12 +31,3 @@ if (process.env.NODE_ENV === 'development') {
 // Export a module-scoped MongoClient promise. By doing this in a
 // separate module, the client can be shared across functions.
 export default clientPromise;
-
-interface UsersDocument extends Document {
-	id: string;
-	status: string;
-}
-
-export const usersPromise = clientPromise.then((client) =>
-	client.db().collection<UsersDocument>('users')
-);
